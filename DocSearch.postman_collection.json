@@ -1,0 +1,344 @@
+{
+  "info": {
+    "name": "DocSearch API",
+    "description": "Multi-tenant document search engine. \n\n**Quick start**\n1. Run `Register Tenant` → copy the returned `id` into the `tenantId` collection variable.\n2. Run `Index Document` one or more times.\n3. Run `Search Documents` with a query.\n\nAll document endpoints require the `X-Tenant-Id` header, which is pre-filled from the `tenantId` variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",   "value": "http://localhost:8080", "type": "string" },
+    { "key": "tenantId",  "value": "",                      "type": "string", "description": "Populated automatically by the Register Tenant post-script" },
+    { "key": "documentId","value": "",                      "type": "string", "description": "Populated automatically by the Index Document post-script" }
+  ],
+  "item": [
+    {
+      "name": "General",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/health-check", "host": ["{{baseUrl}}"], "path": ["health-check"] },
+            "description": "Returns `hello-world` if the server is up."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "hello-world",
+              "_postman_previewlanguage": "text"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tenants",
+      "description": "Tenant lifecycle. Tenants must be registered before documents can be indexed.",
+      "item": [
+        {
+          "name": "Register Tenant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('tenantId', body.id);",
+                  "    pm.test('tenantId saved: ' + body.id, () => pm.expect(body.id).to.be.a('string'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/tenants", "host": ["{{baseUrl}}"], "path": ["api","v1","tenants"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"acme-corp\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Creates a new tenant. The returned `id` is automatically saved to the `tenantId` collection variable."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"id\": \"a1b2c3d4-...\",\n  \"name\": \"acme-corp\",\n  \"createdAt\": \"2026-06-24T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "List Tenants",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/tenants", "host": ["{{baseUrl}}"], "path": ["api","v1","tenants"] },
+            "description": "Returns all registered tenants."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "[\n  { \"id\": \"a1b2c3d4-...\", \"name\": \"acme-corp\", \"createdAt\": \"2026-06-24T00:00:00Z\" }\n]",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get Tenant",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","tenants","{{tenantId}}"]
+            },
+            "description": "Fetch a single tenant by its UUID."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{ \"id\": \"{{tenantId}}\", \"name\": \"acme-corp\", \"createdAt\": \"2026-06-24T00:00:00Z\" }",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "",
+              "_postman_previewlanguage": "text"
+            }
+          ]
+        },
+        {
+          "name": "Delete Tenant",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","tenants","{{tenantId}}"]
+            },
+            "description": "Deletes the tenant and purges all its documents and indexes."
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "body": "",
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "",
+              "_postman_previewlanguage": "text"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "description": "Document CRUD. All requests require the `X-Tenant-Id` header.",
+      "item": [
+        {
+          "name": "Index Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('documentId', body.id);",
+                  "    pm.test('documentId saved: ' + body.id, () => pm.expect(body.id).to.be.a('string'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-Tenant-Id",   "value": "{{tenantId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/documents", "host": ["{{baseUrl}}"], "path": ["api","v1","documents"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Spring Boot Guide\",\n  \"content\": \"Learn how to build production-ready Spring Boot applications with Java 17.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Indexes a new document for the given tenant. The returned `id` is saved to the `documentId` variable automatically."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"id\": \"d1e2f3...\",\n  \"tenantId\": \"{{tenantId}}\",\n  \"title\": \"Spring Boot Guide\",\n  \"content\": \"Learn how to build...\",\n  \"createdAt\": \"2026-06-24T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "404 Unknown Tenant",
+              "status": "Not Found",
+              "code": 404,
+              "body": "",
+              "_postman_previewlanguage": "text"
+            }
+          ]
+        },
+        {
+          "name": "Get Document",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Tenant-Id", "value": "{{tenantId}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documents/{{documentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","documents","{{documentId}}"]
+            },
+            "description": "Retrieves a document by ID, scoped to the tenant in `X-Tenant-Id`. Returns 404 if the document belongs to a different tenant or does not exist."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"{{documentId}}\",\n  \"tenantId\": \"{{tenantId}}\",\n  \"title\": \"Spring Boot Guide\",\n  \"content\": \"Learn how to build...\",\n  \"createdAt\": \"2026-06-24T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "",
+              "_postman_previewlanguage": "text"
+            }
+          ]
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-Tenant-Id", "value": "{{tenantId}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/documents/{{documentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","documents","{{documentId}}"]
+            },
+            "description": "Removes the document and cleans up its entries from both the word and trigram inverted indexes. Returns 404 if the document does not exist for this tenant."
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "body": "",
+              "_postman_previewlanguage": "text"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "",
+              "_postman_previewlanguage": "text"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "description": "Fuzzy full-text search using word inverted index + trigram index + Levenshtein edit distance.",
+      "item": [
+        {
+          "name": "Search Documents",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/search?q=spring&tenant={{tenantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","search"],
+              "query": [
+                { "key": "q",      "value": "spring",        "description": "Search query. Supports fuzzy matching via trigrams and Levenshtein edit distance." },
+                { "key": "tenant", "value": "{{tenantId}}",  "description": "Tenant ID — results are strictly scoped to this tenant." }
+              ]
+            },
+            "description": "Searches documents for the given tenant.\n\n**Scoring (per query token)**\n- Exact word match → +10 pts\n- Edit distance ≤ max-edit-distance (default 2) → +(10 - distance×3) pts\n- Trigram overlap → +1 pt per shared trigram\n\nResults are returned sorted by descending score. The `score` field is included in every result so you can inspect relevance."
+          },
+          "response": [
+            {
+              "name": "200 OK — ranked results",
+              "status": "OK",
+              "code": 200,
+              "body": "[\n  {\n    \"document\": {\n      \"id\": \"d1e2f3...\",\n      \"tenantId\": \"{{tenantId}}\",\n      \"title\": \"Spring Boot Guide\",\n      \"content\": \"Learn how to build production-ready Spring Boot applications.\",\n      \"createdAt\": \"2026-06-24T00:00:00Z\"\n    },\n    \"score\": 14\n  }\n]",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "200 OK — no results",
+              "status": "OK",
+              "code": 200,
+              "body": "[]",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "404 Unknown Tenant",
+              "status": "Not Found",
+              "code": 404,
+              "body": "",
+              "_postman_previewlanguage": "text"
+            }
+          ]
+        },
+        {
+          "name": "Search Documents (fuzzy typo)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/search?q=sprng+bot&tenant={{tenantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","search"],
+              "query": [
+                { "key": "q",      "value": "sprng bot",      "description": "Intentional typos: 'sprng' (missing i) and 'bot' (missing o). Edit distance matching surfaces 'spring' and 'boot'." },
+                { "key": "tenant", "value": "{{tenantId}}" }
+              ]
+            },
+            "description": "Demonstrates fuzzy matching. 'sprng' has edit distance 1 from 'spring'; 'bot' has edit distance 1 from 'boot'. Both are within the default max-edit-distance of 2."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Documents (tenant isolation check)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/search?q=spring&tenant=00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","v1","search"],
+              "query": [
+                { "key": "q",      "value": "spring" },
+                { "key": "tenant", "value": "00000000-0000-0000-0000-000000000000", "description": "A non-existent / different tenant UUID — should return 404." }
+              ]
+            },
+            "description": "Verifies that documents indexed under one tenant are invisible to another. Expects 404 (unknown tenant) or empty array."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
