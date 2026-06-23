@@ -1,0 +1,7 @@
+target/
+*.postman_collection.json
+*.pdf
+generate_docs.py
+.git/
+.idea/
+*.iml
