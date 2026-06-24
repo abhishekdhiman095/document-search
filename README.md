@@ -190,3 +190,9 @@ src/main/java/com/docsearch/app/
 Import `DocSearch.postman_collection.json` into Postman.
 
 The collection auto-saves `tenantId` and `documentId` from responses — run **Register Tenant → Index Document → Search** without copying any IDs manually.
+
+## Docker Command
+
+docker build -t docsearch:latest .
+docker run -p 8080:8080 docsearch:latest
+docker run -p 8080:8080 -e SEARCH_MAX_EDIT_DISTANCE=1 docsearch:latest
